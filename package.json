@@ -2,9 +2,10 @@
   "name": "video-app",
   "version": "1.0.0",
   "description": "A video web app backend ",
+  "type": "module",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev":"nodemon src/index.js",
   },
   "keywords": [
     "Backend",
@@ -12,5 +13,8 @@
     "Coding"
   ],
   "author": "Muhammad Fahid",
-  "license": "ISC"
+  "license": "ISC",
+  "devDependencies": {
+    "nodemon": "^3.1.0"
+  }
 }
