@@ -67,7 +67,7 @@
     return await bcrypt.compare(password, this.password)
   }
 
-  userSchema.methods.generateRefreshTokens = function ()
+  userSchema.methods.generateAccessTokens = function ()
   {
     jwt.sign(
       {
@@ -81,6 +81,20 @@
     {
       expiresIn : process.env.ACCESS_TOKEN_EXPIRY
     }
+    )
+  }
+
+
+  userSchema.methods.generateRefreshTokens = function()
+  {
+    jwt.sign({
+      _id: this._id
+    },
+    process.env.REFRESH_TOKEN_SECRET,
+    {
+      expiresIn: process.env.REFRESH_TOKEN_EXPIRY
+    }
+    
     )
   }
 
