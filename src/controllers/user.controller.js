@@ -3,6 +3,8 @@ import { ApiError } from "../utils/ApiError.js";
 import { User } from "../models/user.model.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
+
+
 const registerUser = asyncHandler(async (req, res) => {
   const { username, fullname, email, password } = req.body;
 
@@ -47,10 +49,11 @@ const registerUser = asyncHandler(async (req, res) => {
 
   //saving to db
 
+  console.log("Cover Image is ", coverImage);
  const user = await User.create({
     fullname,
     username,
-    avatar:avatar.url,
+    avatar,
     coverImage:coverImage?.url || "",
     email,
     password,
