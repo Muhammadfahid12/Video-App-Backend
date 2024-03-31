@@ -1,6 +1,11 @@
 import { Router } from "express";
-import { registerUser } from "../controllers/user.controller.js";
+import { registerUser, userLogin, userLogout } from "../controllers/user.controller.js";
 import { upload } from "../middlewares/multer.js";
+import { verfiyJWT, verfiyJwt } from "../middlewares/auth.middleware.js";
+import { TokenExpiredError } from "jsonwebtoken";
+
+
+
 const router = Router();
 
 router.route("/register").post(
@@ -17,5 +22,11 @@ router.route("/register").post(
 
   registerUser
 );
+
+
+router.route("/login").post(userLogin)
+
+// secure routes
+router.route("/logout").post(verfiyJWT, userLogout)
 
 export default router;

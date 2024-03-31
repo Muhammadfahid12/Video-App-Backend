@@ -62,7 +62,7 @@
 
   //password validation
 
-  //methods is used to create custom methods
+  //methods are being added to the User Schema
   userSchema.methods.isPasswordCorrect = async function (password){
     return await bcrypt.compare(password, this.password)
   }
@@ -70,8 +70,7 @@
   userSchema.methods.generateAccessTokens = function ()
   {
     jwt.sign(
-      {
-        
+      {  
         _id : this._id,
         email : this.email,
         username: this.username,
@@ -83,8 +82,6 @@
     }
     )
   }
-
-
   userSchema.methods.generateRefreshTokens = function()
   {
     jwt.sign({

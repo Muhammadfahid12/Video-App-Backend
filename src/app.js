@@ -4,7 +4,7 @@ import cookieParser from "cookie-parser";
 
 const app = express();
 
-//use method is mostly used when dealing with some kind of middlewares
+//use method is mostly used when dealing with middlewares
 app.use(
   cors({
     origin: process.env.CORS_ORIGIN,
