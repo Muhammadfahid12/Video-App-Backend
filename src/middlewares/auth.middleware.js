@@ -1,9 +1,9 @@
-import { ApiError } from "../utils/ApiError";
-import { asyncHandler } from "../utils/asyncHandler";
+import { ApiError } from "../utils/ApiError.js";
+import { asyncHandler } from "../utils/asyncHandler.js";
 import jwt from "jsonwebtoken";
-import { User } from "../models/user.model";
+import { User } from "../models/user.model.js";
 
-export const verfiyJWT = asyncHandler(async (req, res, next) => {
+export const verfiyJWT = asyncHandler(async (req, _, next) => {
   try {
     // get jwt from client and verfiy with present in server and
     //in mobile cookies are not used, so we are using header method also
@@ -17,6 +17,11 @@ export const verfiyJWT = asyncHandler(async (req, res, next) => {
 
     const decodedToken = await jwt.verify(token, process.env.ACCESS_KEY_TOKEN);
 
+    if(!decodedToken)
+    {
+        throw new ApiError(500,"Decoded Token Error" )
+    }
+
     const user = await User.findById(decodedToken._id).select(
       "-password -refreshToken"
     );
@@ -27,8 +32,7 @@ export const verfiyJWT = asyncHandler(async (req, res, next) => {
 
     req.user = user;
     next();
-
   } catch (error) {
-    throw new ApiError(401, error?.message || "Invalid Access Token")
+    throw new ApiError(401, error?.message || "Invalid Access Token");
   }
 });

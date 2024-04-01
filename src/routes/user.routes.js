@@ -1,8 +1,9 @@
 import { Router } from "express";
 import { registerUser, userLogin, userLogout } from "../controllers/user.controller.js";
 import { upload } from "../middlewares/multer.js";
-import { verfiyJWT, verfiyJwt } from "../middlewares/auth.middleware.js";
-import { TokenExpiredError } from "jsonwebtoken";
+import { verfiyJWT} from "../middlewares/auth.middleware.js";
+import { refreshAccessToken } from "../controllers/user.controller.js";
+import jwt from "jsonwebtoken";
 
 
 
@@ -28,5 +29,7 @@ router.route("/login").post(userLogin)
 
 // secure routes
 router.route("/logout").post(verfiyJWT, userLogout)
+
+router.route("/refresh-token").post(refreshAccessToken)
 
 export default router;
