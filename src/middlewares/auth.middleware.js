@@ -3,6 +3,15 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import jwt from "jsonwebtoken";
 import { User } from "../models/user.model.js";
 
+/*
+1- Get Token from browser cookie
+2- Decode it to get details
+3- get user in the database
+4- add the user details in the request itself and move next() 
+*/
+
+
+
 export const verfiyJWT = asyncHandler(async (req, _, next) => {
   try {
     // get jwt from client and verfiy with present in server and

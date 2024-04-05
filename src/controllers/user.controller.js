@@ -4,6 +4,7 @@ import { User } from "../models/user.model.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import jwt from "jsonwebtoken";
+import { verfiyJWT } from "../middlewares/auth.middleware.js";
 
 // After creating Access and Refresh Token, We'll save Refresh token into database so we don't need to login after again once our Access Token is expired
 
@@ -111,8 +112,8 @@ const registerUser = asyncHandler(async (req, res) => {
 const userLogin = asyncHandler(async (req, res) => {
   //getting data from user
   const { email, username, password } = req.body;
-  console.log("request body is  ", req.body);
-  console.log("email for login is ", email);
+  // console.log("request body is  ", req.body);
+  // console.log("email for login is ", email);
 
   if (!username && !email) {
     throw new ApiError(400, "username or password is required");
@@ -120,7 +121,7 @@ const userLogin = asyncHandler(async (req, res) => {
 
   const user = await User.findOne({ $or: [{ email }, { username }] });
 
-  // console.log("user: ", user);
+  console.log("user: ", user);
 
   if (!user) {
     throw new ApiError(404, "User Does not exist");
@@ -189,58 +190,145 @@ const userLogout = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, {}, " User Logged out "));
 });
 
-
-
-
 const refreshAccessToken = asyncHandler(async (req, res) => {
   const incomingRefreshtoken =
     req.cookies?.refreshToken || req.body.refreshToken;
-try {
-  
-  if (!incomingRefreshtoken) {
-    throw new ApiError(401, "unautherized access");
+  try {
+    if (!incomingRefreshtoken) {
+      throw new ApiError(401, "unautherized access");
+    }
+
+    // we have token in our browser and we'll verify it from the one in server
+
+    const decodedRefreshToken = jwt.verify(
+      incomingRefreshtoken,
+      process.env.REFRESH_TOKEN_SECRET
+    );
+
+    const user = await User.findById(decodedRefreshToken._id);
+
+    if (!user) {
+      throw new ApiError(401, "Invalid Refresh Token");
+    }
+    // verify our token is same the one present in db
+
+    if (incomingRefreshtoken !== user?.refreshToken) {
+      throw new ApiError(401, "Refresh Token is expired or used");
+    }
+
+    const options = {
+      httpOnly: true,
+      secure: true,
+    };
+
+    const { accessToken, newRefreshToken } =
+      await generateAccessAndRefreshTokens(user._id);
+
+    return res
+      .status(200)
+      .cookie("accessToken", accessToken, options)
+      .cookie("refreshToken", newRefreshToken, options)
+      .json(
+        new ApiResponse(
+          200,
+          { accessToken, refreshToken: newRefreshToken },
+          "Access Token Refresh"
+        )
+      );
+  } catch (error) {
+    throw new ApiError(401, "Error while refreshing access token");
   }
-
-  // we have token in our browser and we'll verify it from the one in server
-
-  const decodedRefreshToken = jwt.verify(
-    incomingRefreshtoken,
-    process.env.REFRESH_TOKEN_SECRET
-  );
-
-  const user = await User.findById(decodedRefreshToken._id);
-
-  if (!user) {
-    throw new ApiError(401, "Invalid Refresh Token");
-  }
-  // verify our token is same the one present in db
-
-  if (incomingRefreshtoken !== user?.refreshToken) {
-    throw new ApiError(401, "Refresh Token is expired or used");
-  }
-
-  
-  const options = {
-    httpOnly: true,
-    secure: true
-  }
-  
-  const {accessToken, newRefreshToken} = await generateAccessAndRefreshTokens(user._id);
-
-  return res
-  .status(200)
-  .cookie("accessToken", accessToken, options)
-  .cookie("refreshToken", newRefreshToken, options)
-  .json(
-    new ApiResponse(
-      200,
-      {accessToken, refreshToken: newRefreshToken},
-      "Access Token Refresh"
-    )
-  )
-} catch (error) {
-  throw new ApiError(401, "Error while refreshing access token")
-}
 });
 
-export { registerUser, userLogin, userLogout, refreshAccessToken };
+const changeCurrentPassword = asyncHandler(async (req, res) => {
+  const { oldPassword, newPassword } = req.body;
+
+  // we will use verifyJWT module to get user in the req.
+
+  const user = await User.findById(req.user._id);
+
+  if (!user) {
+    throw new ApiError(401, "User can't found ");
+  }
+
+  const checkPassword = await user.isPasswordCorrect(oldPassword);
+
+  if (!checkPassword) {
+    throw new ApiError(405, "your entered password is wrong");
+  }
+
+  user.password = newPassword;
+  await user.save({ validateBeforeSave: false });
+
+  res
+    .status(200)
+    .json(new ApiResponse(200, {}, "Password Updated Successfully"));
+});
+
+const getCurrentUser = asyncHandler(async (req, res) => {
+  // want to get currentUser logged in, so we can
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, req.user, "Get current login user"));
+});
+
+// updating user account details
+
+const updateAccountDetails = asyncHandler(async (req, res) => {
+  const { fullname, email } = req.body;
+
+  if (!fullname || !email) {
+    throw new ApiError(401, "email and fullname are required to update");
+  }
+
+  const user = await User.findByIdAndUpdate(
+    req.user?._id,
+    {
+      $set: {
+        fullname,
+        email: email, // fullname and email both are correct methods
+      },
+    },
+    { new: true }
+  ).select("-password");
+
+  await user.save({ validateBeforeSave: false });
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, user, "account details updated successfully"));
+});
+
+// update images/file content
+
+const updateUserAvatar = asyncHandler(async (req, res) => {
+  const avatarLocalPath = req.file?.path;
+
+  const avatar = await uploadOnCloudinary(avatarLocalPath);
+
+  const user = await User.findByIdAndUpdate(
+    req.user?._id,
+    {
+      $set: {
+        avatar,
+      },
+    },
+    {
+      new: true,
+    }
+  ).select("-password");
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, user, "User Avatar Updated Successfully"));
+});
+
+export {
+  registerUser,
+  userLogin,
+  userLogout,
+  refreshAccessToken,
+  getCurrentUser,
+  updateUserAvatar,
+};
